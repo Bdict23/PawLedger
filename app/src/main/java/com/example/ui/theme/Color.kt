@@ -1,0 +1,33 @@
+package com.example.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// Primary Dark Palette (Deep Obsidian & Warm Amber-Gold inspired by PawLedger mascot)
+val ObsidianBg = Color(0xFF0D1017)
+val SlateSurface = Color(0xFF161B24)
+val SlateSurfaceElevated = Color(0xFF1E2532)
+val SlateBorder = Color(0xFF2B3445)
+val AmberGold = Color(0xFFF5B74F)
+val AmberGoldMuted = Color(0xFF473518)
+val MintEmerald = Color(0xFF34D399)
+val MintEmeraldMuted = Color(0xFF12382B)
+val CoralRed = Color(0xFFF87171)
+val CoralRedMuted = Color(0xFF3F1D22)
+val SkyInfo = Color(0xFF60A5FA)
+val TextPrimaryDark = Color(0xFFF3F6FC)
+val TextSecondaryDark = Color(0xFF94A3B8)
+
+// Light Palette (Warm Alabaster & Crisp Card Borders)
+val AlabasterBg = Color(0xFFF8FAFC)
+val PureWhiteSurface = Color(0xFFFFFFFF)
+val SoftGraySurface = Color(0xFFF1F5F9)
+val LightBorder = Color(0xFFE2E8F0)
+val RichOchre = Color(0xFFC98212)
+val RichOchreMuted = Color(0xFFFEF3C7)
+val ForestEmerald = Color(0xFF059669)
+val ForestEmeraldMuted = Color(0xFFD1FAE5)
+val CrimsonRed = Color(0xFFDC2626)
+val CrimsonRedMuted = Color(0xFFFEE2E2)
+val CobaltInfo = Color(0xFF2563EB)
+val TextPrimaryLight = Color(0xFF0F172A)
+val TextSecondaryLight = Color(0xFF64748B)

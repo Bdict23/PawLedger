@@ -1,0 +1,301 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidDateIso(s) {
+      return s is string && s.size() == 10 && s.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function isValidAdminPolicy(data, userId) {
+      return data.userId == userId &&
+        data.defaultInterestMode in ['ZERO_INTEREST', 'SIMPLE_FLAT', 'AMORTIZED_MONTHLY'] &&
+        data.allowZeroInterest is bool &&
+        data.allowSimpleFlat is bool &&
+        data.allowAmortizedMonthly is bool &&
+        data.defaultRateBps is int && data.defaultRateBps >= 0 && data.defaultRateBps <= 100000 &&
+        data.defaultGraceDays is int && data.defaultGraceDays >= 0 && data.defaultGraceDays <= 365 &&
+        data.defaultLateFeeBps is int && data.defaultLateFeeBps >= 0 && data.defaultLateFeeBps <= 50000 &&
+        data.defaultLateFeeCapMinor is int && data.defaultLateFeeCapMinor >= 0 &&
+        data.paymentAllocationOrder in ['FEES_INTEREST_PRINCIPAL', 'PRINCIPAL_FIRST'] &&
+        data.defaultCurrencyCode is string && data.defaultCurrencyCode.size() >= 3 && data.defaultCurrencyCode.size() <= 6 &&
+        data.defaultAutoLogRecurring is bool &&
+        (!('encryptedPayload' in data) || (data.encryptedPayload is string && data.encryptedPayload.size() <= 8000)) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidCounterparty(data, userId) {
+      return data.userId == userId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+        (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() <= 40)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000)) &&
+        (!('encryptedPayload' in data) || (data.encryptedPayload is string && data.encryptedPayload.size() <= 8000)) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidContract(data, userId) {
+      return data.userId == userId &&
+        isValidId(data.counterpartyId) &&
+        data.direction in ['LENT', 'BORROWED'] &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+        data.principalMinor is int && data.principalMinor > 0 &&
+        data.currencyCode is string && data.currencyCode.size() >= 3 && data.currencyCode.size() <= 6 &&
+        isValidDateIso(data.startDateIso) &&
+        data.termCount is int && data.termCount >= 1 && data.termCount <= 360 &&
+        data.frequency in ['WEEKLY', 'BIWEEKLY', 'SEMI_MONTHLY_15_30', 'MONTHLY'] &&
+        data.interestMode in ['ZERO_INTEREST', 'SIMPLE_FLAT', 'AMORTIZED_MONTHLY'] &&
+        data.interestRateBps is int && data.interestRateBps >= 0 && data.interestRateBps <= 100000 &&
+        data.graceDays is int && data.graceDays >= 0 && data.graceDays <= 365 &&
+        data.lateFeeBps is int && data.lateFeeBps >= 0 && data.lateFeeBps <= 50000 &&
+        data.lateFeeCapMinor is int && data.lateFeeCapMinor >= 0 &&
+        data.paymentAllocationOrder in ['FEES_INTEREST_PRINCIPAL', 'PRINCIPAL_FIRST'] &&
+        data.autoLogRecurring is bool &&
+        data.status in ['ACTIVE', 'OVERDUE', 'SETTLED', 'DEFAULTED'] &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000)) &&
+        (!('encryptedPayload' in data) || (data.encryptedPayload is string && data.encryptedPayload.size() <= 12000)) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidInstallment(data, userId) {
+      return data.userId == userId &&
+        isValidId(data.contractId) &&
+        data.installmentNumber is int && data.installmentNumber >= 1 && data.installmentNumber <= 360 &&
+        isValidDateIso(data.dueDateIso) &&
+        data.principalDueMinor is int && data.principalDueMinor >= 0 &&
+        data.interestDueMinor is int && data.interestDueMinor >= 0 &&
+        data.lateFeeDueMinor is int && data.lateFeeDueMinor >= 0 &&
+        data.paidMinor is int && data.paidMinor >= 0 &&
+        data.status in ['PENDING', 'PARTIAL', 'PAID', 'OVERDUE'] &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidPayment(data, userId) {
+      return data.userId == userId &&
+        isValidId(data.contractId) &&
+        (!('installmentId' in data) || isValidId(data.installmentId)) &&
+        data.amountMinor is int && data.amountMinor > 0 &&
+        isValidDateIso(data.paidDateIso) &&
+        data.paidAtEpoch is int && data.paidAtEpoch > 0 &&
+        data.autoLogged is bool &&
+        (!('note' in data) || (data.note is string && data.note.size() <= 1000)) &&
+        (!('proofBase64' in data) || (data.proofBase64 is string && data.proofBase64.size() <= 240000)) &&
+        (!('proofSha256' in data) || (data.proofSha256 is string && data.proofSha256.size() <= 128)) &&
+        (!('encryptedPayload' in data) || (data.encryptedPayload is string && data.encryptedPayload.size() <= 260000)) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidRecoveryAudit(data, userId) {
+      return data.userId == userId &&
+        isValidId(data.transferSessionId) &&
+        data.previousUid is string && data.previousUid.size() >= 1 && data.previousUid.size() <= 128 &&
+        data.newUid is string && data.newUid.size() >= 1 && data.newUid.size() <= 128 &&
+        data.recordsTransferredCount is int && data.recordsTransferredCount >= 0 &&
+        data.transferMode in ['LOCAL_REBIND', 'BACKUP_BUNDLE'] &&
+        data.status in ['IN_PROGRESS', 'COMPLETED', 'FAILED'] &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    match /users/{userId} {
+      allow read, write: if false;
+
+      match /admin_policies/{policyId} {
+        allow get: if isOwner(userId) && isValidId(policyId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(policyId) &&
+          incoming().keys().hasAll([
+            'userId', 'defaultInterestMode', 'allowZeroInterest', 'allowSimpleFlat',
+            'allowAmortizedMonthly', 'defaultRateBps', 'defaultGraceDays',
+            'defaultLateFeeBps', 'defaultLateFeeCapMinor', 'paymentAllocationOrder',
+            'defaultCurrencyCode', 'defaultAutoLogRecurring', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'defaultInterestMode', 'allowZeroInterest', 'allowSimpleFlat',
+            'allowAmortizedMonthly', 'defaultRateBps', 'defaultGraceDays',
+            'defaultLateFeeBps', 'defaultLateFeeCapMinor', 'paymentAllocationOrder',
+            'defaultCurrencyCode', 'defaultAutoLogRecurring', 'encryptedPayload',
+            'createdAt', 'updatedAt'
+          ]) &&
+          isValidAdminPolicy(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(policyId) &&
+          isValidAdminPolicy(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'defaultInterestMode', 'allowZeroInterest', 'allowSimpleFlat',
+            'allowAmortizedMonthly', 'defaultRateBps', 'defaultGraceDays',
+            'defaultLateFeeBps', 'defaultLateFeeCapMinor', 'paymentAllocationOrder',
+            'defaultCurrencyCode', 'defaultAutoLogRecurring', 'encryptedPayload', 'updatedAt'
+          ]);
+        allow delete: if isOwner(userId) && isValidId(policyId);
+      }
+
+      match /counterparties/{counterpartyId} {
+        allow get: if isOwner(userId) && isValidId(counterpartyId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(counterpartyId) &&
+          incoming().keys().hasAll(['userId', 'name', 'createdAt', 'updatedAt']) &&
+          incoming().keys().hasOnly([
+            'userId', 'name', 'phone', 'email', 'whatsapp', 'notes',
+            'encryptedPayload', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidCounterparty(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(counterpartyId) &&
+          isValidCounterparty(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'phone', 'email', 'whatsapp', 'notes', 'encryptedPayload', 'updatedAt'
+          ]);
+        allow delete: if isOwner(userId) && isValidId(counterpartyId);
+      }
+
+      match /contracts/{contractId} {
+        allow get: if isOwner(userId) && isValidId(contractId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(contractId) &&
+          incoming().keys().hasAll([
+            'userId', 'counterpartyId', 'direction', 'title', 'principalMinor',
+            'currencyCode', 'startDateIso', 'termCount', 'frequency', 'interestMode',
+            'interestRateBps', 'graceDays', 'lateFeeBps', 'lateFeeCapMinor',
+            'paymentAllocationOrder', 'autoLogRecurring', 'status', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'counterpartyId', 'direction', 'title', 'principalMinor',
+            'currencyCode', 'startDateIso', 'termCount', 'frequency', 'interestMode',
+            'interestRateBps', 'graceDays', 'lateFeeBps', 'lateFeeCapMinor',
+            'paymentAllocationOrder', 'autoLogRecurring', 'status', 'notes',
+            'encryptedPayload', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidContract(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(contractId) &&
+          isValidContract(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'counterpartyId', 'direction', 'title', 'principalMinor', 'currencyCode',
+            'startDateIso', 'termCount', 'frequency', 'interestMode', 'interestRateBps',
+            'graceDays', 'lateFeeBps', 'lateFeeCapMinor', 'paymentAllocationOrder',
+            'autoLogRecurring', 'status', 'notes', 'encryptedPayload', 'updatedAt'
+          ]);
+        allow delete: if isOwner(userId) && isValidId(contractId);
+      }
+
+      match /installments/{installmentId} {
+        allow get: if isOwner(userId) && isValidId(installmentId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(installmentId) &&
+          incoming().keys().hasAll([
+            'userId', 'contractId', 'installmentNumber', 'dueDateIso',
+            'principalDueMinor', 'interestDueMinor', 'lateFeeDueMinor',
+            'paidMinor', 'status', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'contractId', 'installmentNumber', 'dueDateIso',
+            'principalDueMinor', 'interestDueMinor', 'lateFeeDueMinor',
+            'paidMinor', 'status', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidInstallment(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(installmentId) &&
+          isValidInstallment(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().contractId == existing().contractId &&
+          incoming().installmentNumber == existing().installmentNumber &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'dueDateIso', 'principalDueMinor', 'interestDueMinor',
+            'lateFeeDueMinor', 'paidMinor', 'status', 'updatedAt'
+          ]);
+        allow delete: if isOwner(userId) && isValidId(installmentId);
+      }
+
+      match /payments/{paymentId} {
+        allow get: if isOwner(userId) && isValidId(paymentId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(paymentId) &&
+          incoming().keys().hasAll([
+            'userId', 'contractId', 'amountMinor', 'paidDateIso',
+            'paidAtEpoch', 'autoLogged', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'contractId', 'installmentId', 'amountMinor', 'paidDateIso',
+            'paidAtEpoch', 'autoLogged', 'note', 'proofBase64', 'proofSha256',
+            'encryptedPayload', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidPayment(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(paymentId) &&
+          isValidPayment(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().contractId == existing().contractId &&
+          incoming().autoLogged == existing().autoLogged &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'installmentId', 'amountMinor', 'paidDateIso', 'paidAtEpoch',
+            'note', 'proofBase64', 'proofSha256', 'encryptedPayload', 'updatedAt'
+          ]);
+        allow delete: if isOwner(userId) && isValidId(paymentId);
+      }
+
+      match /recovery_audits/{auditId} {
+        allow get: if isOwner(userId) && isValidId(auditId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(auditId) &&
+          incoming().keys().hasAll([
+            'userId', 'transferSessionId', 'previousUid', 'newUid',
+            'recordsTransferredCount', 'transferMode', 'status', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'transferSessionId', 'previousUid', 'newUid',
+            'recordsTransferredCount', 'transferMode', 'status', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidRecoveryAudit(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(auditId) &&
+          isValidRecoveryAudit(incoming(), userId) &&
+          existing().status == 'IN_PROGRESS' &&
+          incoming().userId == existing().userId &&
+          incoming().transferSessionId == existing().transferSessionId &&
+          incoming().previousUid == existing().previousUid &&
+          incoming().newUid == existing().newUid &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'recordsTransferredCount', 'status', 'updatedAt'
+          ]);
+        allow delete: if false;
+      }
+    }
+  }
+}

@@ -1,0 +1,222 @@
+{
+  "entities": {
+    "AdminPolicy": {
+      "title": "AdminPolicy",
+      "description": "Super Admin configuration governing loan interest modes, defaults, late-fee caps, and recurring rules.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "defaultInterestMode": { "type": "string", "enum": ["ZERO_INTEREST", "SIMPLE_FLAT", "AMORTIZED_MONTHLY"] },
+        "allowZeroInterest": { "type": "boolean" },
+        "allowSimpleFlat": { "type": "boolean" },
+        "allowAmortizedMonthly": { "type": "boolean" },
+        "defaultRateBps": { "type": "integer", "description": "Basis points (e.g. 500 = 5.00%)" },
+        "defaultGraceDays": { "type": "integer" },
+        "defaultLateFeeBps": { "type": "integer" },
+        "defaultLateFeeCapMinor": { "type": "integer" },
+        "paymentAllocationOrder": { "type": "string", "enum": ["FEES_INTEREST_PRINCIPAL", "PRINCIPAL_FIRST"] },
+        "defaultCurrencyCode": { "type": "string" },
+        "defaultAutoLogRecurring": { "type": "boolean" },
+        "encryptedPayload": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": [
+        "userId",
+        "defaultInterestMode",
+        "allowZeroInterest",
+        "allowSimpleFlat",
+        "allowAmortizedMonthly",
+        "defaultRateBps",
+        "defaultGraceDays",
+        "defaultLateFeeBps",
+        "defaultLateFeeCapMinor",
+        "paymentAllocationOrder",
+        "defaultCurrencyCode",
+        "defaultAutoLogRecurring",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Counterparty": {
+      "title": "Counterparty",
+      "description": "Borrower or lender contact record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "notes": { "type": "string" },
+        "encryptedPayload": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "createdAt", "updatedAt"]
+    },
+    "LoanContract": {
+      "title": "LoanContract",
+      "description": "Lender or borrower contract with immutable Super Admin policy snapshot.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "counterpartyId": { "type": "string" },
+        "direction": { "type": "string", "enum": ["LENT", "BORROWED"] },
+        "title": { "type": "string" },
+        "principalMinor": { "type": "integer" },
+        "currencyCode": { "type": "string" },
+        "startDateIso": { "type": "string" },
+        "termCount": { "type": "integer" },
+        "frequency": { "type": "string", "enum": ["WEEKLY", "BIWEEKLY", "SEMI_MONTHLY_15_30", "MONTHLY"] },
+        "interestMode": { "type": "string", "enum": ["ZERO_INTEREST", "SIMPLE_FLAT", "AMORTIZED_MONTHLY"] },
+        "interestRateBps": { "type": "integer" },
+        "graceDays": { "type": "integer" },
+        "lateFeeBps": { "type": "integer" },
+        "lateFeeCapMinor": { "type": "integer" },
+        "paymentAllocationOrder": { "type": "string", "enum": ["FEES_INTEREST_PRINCIPAL", "PRINCIPAL_FIRST"] },
+        "autoLogRecurring": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["ACTIVE", "OVERDUE", "SETTLED", "DEFAULTED"] },
+        "notes": { "type": "string" },
+        "encryptedPayload": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "counterpartyId",
+        "direction",
+        "title",
+        "principalMinor",
+        "currencyCode",
+        "startDateIso",
+        "termCount",
+        "frequency",
+        "interestMode",
+        "interestRateBps",
+        "graceDays",
+        "lateFeeBps",
+        "lateFeeCapMinor",
+        "paymentAllocationOrder",
+        "autoLogRecurring",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Installment": {
+      "title": "Installment",
+      "description": "Scheduled repayment installment linked to a LoanContract.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "contractId": { "type": "string" },
+        "installmentNumber": { "type": "integer" },
+        "dueDateIso": { "type": "string" },
+        "principalDueMinor": { "type": "integer" },
+        "interestDueMinor": { "type": "integer" },
+        "lateFeeDueMinor": { "type": "integer" },
+        "paidMinor": { "type": "integer" },
+        "status": { "type": "string", "enum": ["PENDING", "PARTIAL", "PAID", "OVERDUE"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "contractId",
+        "installmentNumber",
+        "dueDateIso",
+        "principalDueMinor",
+        "interestDueMinor",
+        "lateFeeDueMinor",
+        "paidMinor",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PaymentTransaction": {
+      "title": "PaymentTransaction",
+      "description": "Logged manual or recurring payment with optional compressed proof-of-payment.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "contractId": { "type": "string" },
+        "installmentId": { "type": "string" },
+        "amountMinor": { "type": "integer" },
+        "paidDateIso": { "type": "string" },
+        "paidAtEpoch": { "type": "integer" },
+        "autoLogged": { "type": "boolean" },
+        "note": { "type": "string" },
+        "proofBase64": { "type": "string" },
+        "proofSha256": { "type": "string" },
+        "encryptedPayload": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "contractId",
+        "amountMinor",
+        "paidDateIso",
+        "paidAtEpoch",
+        "autoLogged",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RecoveryAudit": {
+      "title": "RecoveryAudit",
+      "description": "Audit record for Super Admin Account Recovery Transfer to a newly created Gmail account.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "transferSessionId": { "type": "string" },
+        "previousUid": { "type": "string" },
+        "newUid": { "type": "string" },
+        "recordsTransferredCount": { "type": "integer" },
+        "transferMode": { "type": "string", "enum": ["LOCAL_REBIND", "BACKUP_BUNDLE"] },
+        "status": { "type": "string", "enum": ["IN_PROGRESS", "COMPLETED", "FAILED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "transferSessionId",
+        "previousUid",
+        "newUid",
+        "recordsTransferredCount",
+        "transferMode",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/admin_policies/{policyId}": {
+      "schema": { "$ref": "#/entities/AdminPolicy" },
+      "description": "Per-user Super Admin loan and interest policy settings."
+    },
+    "/users/{userId}/counterparties/{counterpartyId}": {
+      "schema": { "$ref": "#/entities/Counterparty" },
+      "description": "Per-user counterparty contact records."
+    },
+    "/users/{userId}/contracts/{contractId}": {
+      "schema": { "$ref": "#/entities/LoanContract" },
+      "description": "Per-user lent and borrowed loan contracts."
+    },
+    "/users/{userId}/installments/{installmentId}": {
+      "schema": { "$ref": "#/entities/Installment" },
+      "description": "Per-user generated repayment schedule installments."
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/PaymentTransaction" },
+      "description": "Per-user payment transactions and proof-of-payment metadata."
+    },
+    "/users/{userId}/recovery_audits/{auditId}": {
+      "schema": { "$ref": "#/entities/RecoveryAudit" },
+      "description": "Per-user Super Admin account recovery transfer audit log."
+    }
+  }
+}

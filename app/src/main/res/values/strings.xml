@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">PawLedger</string>
+    <string name="tagline">Private Loan &amp; Debt Ledger</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="sign_in_subtitle">Encrypted multi-device sync, offline speed, and smart repayment tracking.</string>
+    <string name="biometric_title">Unlock PawLedger</string>
+    <string name="biometric_subtitle">Verify your identity to view private loan balances</string>
+    <string name="admin_biometric_subtitle">Confirm your identity to access Super Admin controls</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_contracts">Contracts</string>
+    <string name="nav_analytics">Analytics</string>
+    <string name="nav_admin">Admin</string>
+</resources>
